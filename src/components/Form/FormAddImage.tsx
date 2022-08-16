@@ -62,7 +62,7 @@ export function FormAddImage({ closeModal }: FormAddImageProps): JSX.Element {
         description: data.description,
       });
 
-      return response;
+      return response.data;
     },
     {
       onSuccess: () => queryClient.invalidateQueries('images'),
