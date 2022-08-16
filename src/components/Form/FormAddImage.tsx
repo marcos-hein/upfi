@@ -20,43 +20,52 @@ export function FormAddImage({ closeModal }: FormAddImageProps): JSX.Element {
     image: {
       required: 'Arquivo obrigatório',
       validate: {
-        lessThan10MB: v =>
-          v[0].size < 10000000 || 'O arquivo deve ser menor que 10MB',
-        //   acceptedFormats: v =>
-        //     new RegExp(/\d/).test(v[0].type) ||
-        //     'Somente são aceitos arquivos PNG, JPEG e GIF',
+        lessThan10MB: fileList => {
+          const tenMegaBytes = 10000000;
+          return (
+            fileList[0].size < tenMegaBytes ||
+            'O arquivo deve ser menor que 10MB'
+          );
+        },
+        acceptedFormats: fileList => {
+          const isValidType = /\/(jpeg|png|gif)$/.test(fileList[0].type);
+          return isValidType || 'Somente são aceitos arquivos PNG, JPEG e GIF';
+        },
       },
     },
     title: {
       required: 'Título obrigatório',
-      validate: {
-        minLength: {
-          value: 2,
-          message: 'Mínimo de 2 caracteres',
-        },
-        maxLength: {
-          value: 20,
-          message: 'Máximo de 20 caracteres',
-        },
+      minLength: {
+        value: 2,
+        message: 'Mínimo de 2 caracteres',
+      },
+      maxLength: {
+        value: 20,
+        message: 'Máximo de 20 caracteres',
       },
     },
     description: {
       required: 'Descrição obrigatória',
-      validate: {
-        maxLength: {
-          value: 65,
-          message: 'Máximo de 65 caracteres',
-        },
+      maxLength: {
+        value: 65,
+        message: 'Máximo de 65 caracteres',
       },
     },
   };
 
   const queryClient = useQueryClient();
   const mutation = useMutation(
-    // TODO MUTATION API POST REQUEST,
-    // async () => {}
+    async (data: Record<string, unknown>) => {
+      const response = await api.post('api/images', {
+        url: imageUrl,
+        title: data.title,
+        description: data.description,
+      });
+
+      return response;
+    },
     {
-      // TODO ONSUCCESS MUTATION
+      onSuccess: () => queryClient.invalidateQueries('images'),
     }
   );
 
@@ -66,13 +75,38 @@ export function FormAddImage({ closeModal }: FormAddImageProps): JSX.Element {
 
   const onSubmit = async (data: Record<string, unknown>): Promise<void> => {
     try {
-      // TODO SHOW ERROR TOAST IF IMAGE URL DOES NOT EXISTS
-      // TODO EXECUTE ASYNC MUTATION
-      // TODO SHOW SUCCESS TOAST
+      if (!imageUrl) {
+        toast({
+          title: 'Imagem não adicionada',
+          description:
+            'É preciso adicionar e aguardar o upload de uma imagem antes de realizar o cadastro.',
+          status: 'error',
+          duration: 5000,
+          isClosable: true,
+        });
+        return;
+      }
+      await mutation.mutateAsync(data);
+      toast({
+        title: 'Imagem cadastrada',
+        description: 'Sua imagem foi cadastrada com sucesso.',
+        status: 'success',
+        duration: 5000,
+        isClosable: true,
+      });
     } catch {
-      // TODO SHOW ERROR TOAST IF SUBMIT FAILED
+      toast({
+        title: 'Falha no cadastro',
+        description: 'Ocorreu um erro ao tentar cadastrar a sua imagem.',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
     } finally {
-      // TODO CLEAN FORM, STATES AND CLOSE MODAL
+      reset();
+      setLocalImageUrl('');
+      setImageUrl('');
+      closeModal();
     }
   };
 
